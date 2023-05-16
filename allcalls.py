@@ -445,3 +445,68 @@ axs[1].legend(loc='upper center', bbox_to_anchor=(0.5, 1.32), ncol=1, fontsize=f
 
 plt.savefig('figures/trans5loss.pdf', bbox_inches='tight')
 fig.show()
+
+## comparison of linear classification on raw and fourier-transformed features ###################################################
+from tensorflow.python.keras.models import Sequential, Model
+from tensorflow.python.keras.layers import Input, Activation, Dense, Conv2D, MaxPooling2D, InputLayer, Flatten, Dropout, Softmax
+
+numlayers = 2
+windowhalfwidth = 8
+inputsize = (2*windowhalfwidth)**2
+units = inputsize; N = inputsize; num_layers_withinlayer = inputsize
+newinputsize = inputsize
+
+epochs = 50
+batch_size = 512
+N_classes = 10
+nummodels = 1
+
+mnist_dp = h.MNISTDataProcessor(dataset='fashion_mnist')
+gamma_pos = 'out'
+
+xtrain = np.reshape(mnist_dp.x_train_raw, (mnist_dp.x_train_raw.shape[0],
+                                           mnist_dp.x_train_raw.shape[1]*mnist_dp.x_train_raw.shape[2]), order='C')
+ytrain = mnist_dp.y_train
+ytrain_onehot = np.eye(10)[ytrain]
+
+xtest = np.reshape(mnist_dp.x_test_raw, (mnist_dp.x_test_raw.shape[0],
+                                         mnist_dp.x_test_raw.shape[1]*mnist_dp.x_test_raw.shape[2]), order='C')
+ytest = mnist_dp.y_test
+ytest_onehot = np.eye(10)[ytest]
+
+# Fourier transformed data
+data = mnist_dp.fourier(windowhalfwidth)
+num_test = len(data.y_test_ind)
+newdata = data
+
+## one-layer network on raw data
+Lin = Sequential([
+    InputLayer(input_shape = xtrain[0].shape),
+    Dense(10, activation = 'softmax')
+    ])
+Lin.compile(optimizer = 'adam', loss = tf.keras.losses.SparseCategoricalCrossentropy(), 
+                      metrics = [tf.keras.metrics.SparseCategoricalAccuracy()])
+Lin.fit(xtrain, ytrain, batch_size = 600, 
+            epochs = 50, validation_data = (xtest, ytest))
+
+predlabels = np.argmax(Lin.predict(xtest), axis=1)
+print(f"acc = ({np.mean(predlabels==ytest)})")
+Lin.save(f"models/FMNISTLinClass")
+
+## one-layer network on Fourier transformed data
+realizedxtrain = np.concatenate((np.real(data.x_train), np.imag(data.x_train)), axis=1)
+realizedxtest = np.concatenate((np.real(data.x_test), np.imag(data.x_test)), axis=1)
+FourierLin = Sequential([
+    InputLayer(input_shape = (2*inputsize,)),
+    Dense(10, activation = 'softmax')
+    ])
+FourierLin.compile(optimizer = 'adam', loss = tf.keras.losses.SparseCategoricalCrossentropy(), 
+                      metrics = [tf.keras.metrics.SparseCategoricalAccuracy()])
+FourierLin.fit(realizedxtrain, data.y_train_ind, batch_size = 600, 
+            epochs = 50, validation_data = (realizedxtest, data.y_test_ind))
+
+predlabels = np.argmax(FourierLin.predict(realizedxtest), axis=1)
+print(f"acc = ({np.mean(predlabels==data.y_test_ind)})")
+FourierLin.save(f"models/FMNISTFourierLinClass")
+
+
