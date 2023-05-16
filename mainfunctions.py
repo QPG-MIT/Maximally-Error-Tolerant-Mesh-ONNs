@@ -31,7 +31,7 @@ from neurophox.tensorflow import RM, SVD
 from neurophox.ml.nonlinearities import cnormsq
 from neurophox.tensorflow.generic import MeshPhasesTensorflow
 
-######################################################################################################################################################################
+#######################################################################################################################################
 
 def directtraining(numlayers, windowhalfwidth, dataset, epochs=50, batch_size=512, N_classes=10, nummodels=1, 
                     gamma_pos='out', saveflag=True, saveflagcheckpoints=False, splitting_errors=35, 
@@ -99,7 +99,7 @@ def directtraining(numlayers, windowhalfwidth, dataset, epochs=50, batch_size=51
                                                      selectedloss=selectedloss,
                                                      bs_error=bs_error)
 
-#################################################################################################################################################################
+###################################################################################################################################
 
 def transfertraining(numlayers, windowhalfwidth, dataset, runno=1, epochsperstep=2, batch_size=512, N_classes=10, nummodels=1, 
                     gamma_pos='out', trainlayervector=None, useerrcorr=False, useimmprevoptim=False, 
@@ -112,20 +112,24 @@ def transfertraining(numlayers, windowhalfwidth, dataset, runno=1, epochsperstep
                     windowhalfwidth (int): half the side of the square window used to lowpass filter the image FFT 
                     dataset (string): 'mnist' or 'fashion_mnist' or 'kmnist' 
                     runno: run of the ideal mesh model that should be used as the starting point for transfer training
-                    epochsperstep (int): number of retraining epochs when weights are transferred from one error level to the next, default 2
+                    epochsperstep (int): number of retraining epochs when weights are transferred from one error level to the next,
+                                        default 2
                     batch_size (int): training batch size, default 512
                     N_classes (int): number of output classes, default 10
                     nummodels (int): redundant variable, should be hardcoded to 1 to ensure smooth execution of other functions
                     gamma_pos (string): position of the Clements mesh phase screen, only 'out' is currently supported
                     trainlayervector: List of bools that indicates whether the corresponding layer should be trained. None by default. 
-                    useerrcorr (bool): Flag that, if true, uses Bandyopadhyay-type error correction when weights are transferred from one error level to the next.
+                    useerrcorr (bool): Flag that, if true, uses Bandyopadhyay-type error correction when weights are transferred
+                                      from one error level to the next.
                                         False by default.
-                    useimmprevoptim (bool): Flag that, if true, uses the optimizer (along with its state) of the preceding error error level for the next level.
-                                        False by default. 
+                    useimmprevoptim (bool): Flag that, if true, uses the optimizer (along with its state) of the preceding
+                                            error error level for the next level.
+                                            False by default. 
                     selectedloss: loss function for training
                     optimizer: optimizer to be used, 'adam' by default
 
-            Saves models periodically in the folder dataset+f"{inputsize}"+f'/err{errinit}/run{runno}'+f'/adiabaticnoisymodel{splitting_errors[j]}'. 
+            Saves models periodically in the folder:
+            dataset+f"{inputsize}"+f'/err{errinit}/run{runno}'+f'/adiabaticnoisymodel{splitting_errors[j]}'. 
             Saves accuracies in dataset+f"{inputsize}"+f'/err{errinit}/run{runno}'+'/adiabatichistories.pickle'
             Returns nothing.
     '''
@@ -230,7 +234,7 @@ def transfertraining(numlayers, windowhalfwidth, dataset, runno=1, epochsperstep
     with open(foldername+'/adiabatichistories.pickle', 'wb') as outputfile:
         pickle.dump(modelhistories, outputfile)
 
-#########################################################################################################################################################################
+#########################################################################################################################
 
 def extractthetas(foldername, filename, inputsize, numlayers=2, gamma_pos='out', matrices=False, inputismodel=False):
     if inputismodel:  
@@ -251,7 +255,8 @@ def extractthetas(foldername, filename, inputsize, numlayers=2, gamma_pos='out',
 def uncorrcorr3mzi(dataset, windowhalfwidth=8, numruns=5, numlayers=2):
 
     '''
-    Plugs weights of ideal meshes into faulty meshes without and with the error-correction of Bandyopadhyay et al and measures the resultant test accuracies.
+    Plugs weights of ideal meshes into faulty meshes without and with the error-correction of Bandyopadhyay et al and measures
+    the resultant test accuracies.
     Also programs the ideal matrices into faulty 3MZI meshes, with error-correction, and records the resultant test accuracy. 
 
             Parameters:
@@ -260,7 +265,8 @@ def uncorrcorr3mzi(dataset, windowhalfwidth=8, numruns=5, numlayers=2):
                     dataset (string): 'mnist' or 'fashion_mnist' or 'kmnist' 
                     numruns: number of random meshes to generate for each error level
 
-            Saves accuracies of uncorrected/corrected/3MZI faulty meshes in dataset+f"{inputsize}"+f'/err0/run{counter}'+'/greenredaccs.pickle'
+            Saves accuracies of uncorrected/corrected/3MZI faulty meshes in:
+            dataset+f"{inputsize}"+f'/err0/run{counter}'+'/greenredaccs.pickle'
     '''
 
     inputsize = (2*windowhalfwidth)**2
@@ -307,11 +313,13 @@ def uncorrcorr3mzi(dataset, windowhalfwidth=8, numruns=5, numlayers=2):
         with open(foldername+'/greenredaccs.pickle', 'wb') as outputfile:
             pickle.dump(errors_and_accs, outputfile)
 
-###########################################################################################################################################################################
+#############################################################################################################################
 
-def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1, runno=1, numtrials=10, 
-                    MZIbasemeanloss=0.02, MZIbasestddev=0.0016, multiplier=1, heaterfrac=0.8, 
-                    gamma_pos='out', trainlayervector=None):
+def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1, runno=1, numtrials=10,
+                        heaterbasemeanloss=0.084, heaterbasestddev=0.01,
+                        splitterbasemeanloss=0.021, splitterbasestddev=0.0025,
+                        heaterlengthfrac=1, multiplier=1, randomalphabetas=False,
+                        gamma_pos='out', trainlayervector=None):
 
     '''
     Plugs trained neurophox Clements lossless maximally faulty mesh phases into lossy meshes and measures the test accuracy.
@@ -323,15 +331,27 @@ def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1
                     splitting_error: the error of the lossless mesh model that is being used
                     runno: run of the lossless mesh model that should be plugged into the lossy mesh
                     numtrials: number of random lossy meshes over which the accuracy will be averaged
-                    MZIbasemeanloss: minimum mean loss per MZI in dB
-                    MZIbasestddev: minimum loss standard deviation per MZI in dB
-                    multiplier (int): multiple of the minimum loss that should be used in the instantiated mesh,
-                                      mean loss per MZI will be multiplier * MZIbasemeanloss, stddev will be sqrt(multiplier) * MZIbasestddev  
-                    heaterfrac: fraction of the loss that occurs in the center part of the MZI
+                    heaterbasemeanloss: mean optical loss of 400um-long heater in dB
+                    heaterbasestddev: standard deviation of optical loss of 400um-long heater in dB
+                    splitterbasemeanloss: mean optical loss of 100um-long splitter in dB
+                    splitterbasestddev: standard deviation of optical loss of 100um-long splitter in dB
+                    heaterlengthfrac: (length of MZI heater in um)/400um
+                    multiplier (int): multiplicative factor used to set the loss of the instantiated mesh,
+                                      mean loss per heater is multiplier * heaterlengthfrac * heaterbasemeanloss,
+                                      stddev of loss per heater is sqrt(multiplier * heaterlengthfrac) * heaterbasestddev,
+                                      mean loss per splitter is multiplier * splitterbasemeanloss,
+                                      stddev of loss per splitter is sqrt(multiplier) * splitterbasestddev
+                    randomalphabetas: flag. If True, a pregenerated mesh with random 10% beamsplitter faults is used to generate results
+                                            If False, maximally error-tolerant meshes are used 
                     gamma_pos (string): position of the Clements mesh phase screen, only 'out' is currently supported
                     trainlayervector: List of bools that indicates whether the corresponding layer should be trained. None by default. 
 
-            Saves accuracies in dataset+f"{inputsize}"+f'/err{errindex}/run{runno}'+f'/lossyacc{meanlossperMZI}.pickle' where errindex = int(splitting_error*100)
+            if randomalphabetas is False, saves accuracies in:
+            dataset+f"{inputsize}"+f'/err{errindex}/run{runno}'+f'/lossyacc_heater{heaterlengthfrac}_multiplier{multiplier}.pickle'
+            else, saves accuracies in: 
+            dataset+f"{inputsize}"+f'/err{errindex}/run{runno}'+
+            f'/randomalphabetaslossyacc_heater{heaterlengthfrac}_multiplier{multiplier}.pickle'
+            where errindex = int(splitting_error*100)
             Returns nothing.
     '''
 
@@ -354,49 +374,81 @@ def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1
     # for splitting_error = 0.1, use runno = 1
 
     errindex = int(splitting_error*100)
-
-    foldername = 'models/'+dataset+f"/size{inputsize}"+f'/err{errindex}/run{runno}'
-    filename = 'idealthetas.pickle'
-
-    sourcemodelpath = foldername+'/'+filename
-
-    with open(sourcemodelpath, 'rb') as outputfile:
-        thetasorig, phisorig, gammasorig = pickle.load(outputfile)
-
-    thetas = copy.deepcopy(thetasorig)
-    phis = copy.deepcopy(phisorig)
-    gammas = copy.deepcopy(gammasorig)
-
+    
     ## input loss in dB
-    meanlossperMZI = MZIbasemeanloss*multiplier
-    standevperMZI = MZIbasestddev*np.sqrt(multiplier)
+    
+    heatermean = heaterbasemeanloss*multiplier*heaterlengthfrac
+    heaterstandev = heaterbasestddev*np.sqrt(multiplier*heaterlengthfrac)
+    splittermean = splitterbasemeanloss*multiplier
+    splitterstandev = splitterbasestddev*np.sqrt(multiplier)
 
+    leftmean = heatermean + splittermean/2
+    leftstandev = np.sqrt(heaterstandev**2 + splitterstandev**2/2)
+    centermean = heatermean + splittermean
+    centerstandev = np.sqrt(heaterstandev**2 + splitterstandev**2)
+    rightmean = splittermean/2
+    rightstandev = np.sqrt(splitterstandev**2/2)
+    
     ## splitter error ##########################################################################
 
-    bs_sigma = 0.5 * np.arcsin(2 * splitting_error)
-    alphainput = np.ones((numlayers, newinputsize, newinputsize // 2)) * 2 * bs_sigma
-    alphainput[:, 1::2, -1] = 0
-    betainput = np.zeros((numlayers, newinputsize, newinputsize // 2))
+    if not randomalphabetas:
+        
+        foldername = 'models/'+dataset+f"/size{inputsize}"+f'/err{errindex}/run{runno}'
+        filename = 'idealthetas.pickle'
 
-    bs_error = [tuple([betainput[i], alphainput[i]]) for i in np.arange(numlayers)]
+        sourcemodelpath = foldername+'/'+filename
 
-    ###########################################################################################################
-    heatermean = heaterfrac*meanlossperMZI
-    heaterstandev = np.sqrt(heaterfrac)*standevperMZI
-    periphermean = (1-heaterfrac)*meanlossperMZI/2
-    peripherstandev = np.sqrt((1-heaterfrac)/2)*standevperMZI
+        with open(sourcemodelpath, 'rb') as outputfile:
+            thetasorig, phisorig, gammasorig = pickle.load(outputfile)
+
+        thetas = copy.deepcopy(thetasorig)
+        phis = copy.deepcopy(phisorig)
+        gammas = copy.deepcopy(gammasorig)
+
+        bs_sigma = 0.5 * np.arcsin(2 * splitting_error)
+        alphainput = np.ones((numlayers, newinputsize, newinputsize // 2)) * 2 * bs_sigma
+        alphainput[:, 1::2, -1] = 0
+        betainput = np.zeros((numlayers, newinputsize, newinputsize // 2))
+
+        bs_errorout = [tuple([betainput[i], alphainput[i]]) for i in np.arange(numlayers)]
+        
+    else:
+        
+        foldername = 'models/'+dataset+f"/size{inputsize}"+f'/err{errindex}/run{runno}'
+        filename = 'randomalphasbetas.pickle'
+
+        sourcemodelpath = foldername+'/'+filename
+        
+        with open(sourcemodelpath, 'rb') as inputfile:
+            [alphaout, betaout, bs_errorout, thetasorig, phisorig, gammasorig,
+             thetasideal, phisideal, gammasideal, thetas, phis, gammas] = pickle.load(inputfile)
+            
+    #####################################################################################################
 
     lossesaccsdump = {}
     lossesaccsdump['sourcemodelpath'] = sourcemodelpath
     lossesaccsdump['numtrials'] = numtrials 
     lossesaccsdump['N'] = N
-    lossesaccsdump['meanlossperMZI'] = meanlossperMZI
-    lossesaccsdump['standevperMZI'] = standevperMZI
-    lossesaccsdump['heaterfrac'] = heaterfrac
+    lossesaccsdump['multiplier'] = multiplier
+    lossesaccsdump['heaterlengthfrac'] = heaterlengthfrac
+    lossesaccsdump['randomalphabetas'] = randomalphabetas
+    
+    lossesaccsdump['heaterbasemeanloss'] = heaterbasemeanloss
+    lossesaccsdump['heaterbasestddev'] = heaterbasestddev
+    lossesaccsdump['splitterbasemeanloss'] = splitterbasemeanloss
+    lossesaccsdump['splitterbasestddev'] = splitterbasestddev
+    
     lossesaccsdump['heatermean'] = heatermean
     lossesaccsdump['heaterstandev'] = heaterstandev
-    lossesaccsdump['periphermean'] = periphermean
-    lossesaccsdump['peripherstandev'] = peripherstandev
+    lossesaccsdump['splittermean'] = splittermean
+    lossesaccsdump['splitterstandev'] = splitterstandev
+
+    lossesaccsdump['leftmean'] = leftmean 
+    lossesaccsdump['leftstandev'] = leftstandev 
+    lossesaccsdump['centermean'] = centermean 
+    lossesaccsdump['centerstandev'] = centerstandev 
+    lossesaccsdump['rightmean'] = rightmean 
+    lossesaccsdump['rightstandev'] = rightstandev 
 
     lossyacc = np.zeros(numtrials)
 
@@ -404,27 +456,30 @@ def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1
 
     for itr in np.arange(numtrials):
         targetloss = np.zeros((numlayers, N, N//2, 3, 2))
-
-        targetloss[:, :, :, 0, :] = np.random.normal(loc=periphermean, scale=peripherstandev,
+        
+        targetloss[:, :, :, 0, :] = np.random.normal(loc=leftmean, scale=leftstandev,
                                                      size=(numlayers, N, N//2, 2))
+
         while np.any(targetloss[:, :, :, 0, :]<0):
             (targetloss[:, :, :, 0, :])[targetloss[:, :, :, 0, :]<0] =\
-            np.random.normal(loc=periphermean, scale=peripherstandev,
-                                                         size=(numlayers, N, N//2, 2))[targetloss[:, :, :, 0, :]<0]
+            np.random.normal(loc=leftmean, scale=leftstandev,
+                             size=(numlayers, N, N//2, 2))[targetloss[:, :, :, 0, :]<0]
             
-        targetloss[:, :, :, 2, :] = np.random.normal(loc=periphermean, scale=peripherstandev,
+        targetloss[:, :, :, 2, :] = np.random.normal(loc=rightmean, scale=rightstandev,
                                                      size=(numlayers, N, N//2, 2))
+    
         while np.any(targetloss[:, :, :, 2, :]<0):
             (targetloss[:, :, :, 2, :])[targetloss[:, :, :, 2, :]<0] =\
-            np.random.normal(loc=periphermean, scale=peripherstandev,
-                                                         size=(numlayers, N, N//2, 2))[targetloss[:, :, :, 2, :]<0]
-            
-        targetloss[:, :, :, 1, :] = np.random.normal(loc=heatermean, scale=heaterstandev,
-                                                     size=(numlayers, N, N//2, 2)) 
+            np.random.normal(loc=rightmean, scale=rightstandev,
+                             size=(numlayers, N, N//2, 2))[targetloss[:, :, :, 2, :]<0]
+        
+        targetloss[:, :, :, 1, :] = np.random.normal(loc=centermean, scale=centerstandev,
+                                                     size=(numlayers, N, N//2, 2))
+    
         while np.any(targetloss[:, :, :, 1, :]<0):
             (targetloss[:, :, :, 1, :])[targetloss[:, :, :, 1, :]<0] =\
-            np.random.normal(loc=heatermean, scale=heaterstandev,
-                                                         size=(numlayers, N, N//2, 2))[targetloss[:, :, :, 1, :]<0]
+            np.random.normal(loc=centermean, scale=centerstandev,
+                             size=(numlayers, N, N//2, 2))[targetloss[:, :, :, 1, :]<0]
         
         lossesaccsdump[f'targetloss{itr}'] = targetloss
 
@@ -437,7 +492,7 @@ def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1
                                     gamma_init=gammas,
                                     L=numlayers, 
                                     wvgloss=wvgloss,
-                                    bs_error=bs_error,
+                                    bs_error=bs_errorout,
                                     gamma_pos=gamma_pos, 
                                     trainlayervectorin=trainlayervector)
 
@@ -447,11 +502,16 @@ def lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=0.1
         print(f'iter {itr}, acc is {lossyacc[itr]}, time = {(time.time()-start)/60}')
             
     lossesaccsdump['lossyacc'] = lossyacc
+    
+    if not randomalphabetas: 
+        filename = f'/lossyacc_heater{heaterlengthfrac}_multiplier{multiplier}.pickle'
+    else:
+        filename = f'/randomalphabetaslossyacc_heater{heaterlengthfrac}_multiplier{multiplier}.pickle'
 
-    with open(foldername+f'/lossyacc{meanlossperMZI}.pickle', 'wb') as outputfile:
+    with open(foldername+filename, 'wb') as outputfile:
         pickle.dump(lossesaccsdump, outputfile)
 
-###########################################################################################################################################################################
+#################################################################################################################
 
 # This class has as attributes all the quantities that need to be plotted 
 class plotquants:
