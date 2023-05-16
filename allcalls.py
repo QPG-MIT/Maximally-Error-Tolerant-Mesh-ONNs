@@ -33,7 +33,7 @@ from neurophox.tensorflow.generic import MeshPhasesTensorflow
 
 import mainfunctions as m
 
-# extracting test accuracy from a model parameter file ##############################################################################################################
+# extracting test accuracy from a model parameter file ########################################################################
 
 windowhalfwidth = 8
 inputsize = (2*windowhalfwidth)**2
@@ -88,7 +88,7 @@ modeltransferred = h.const_onn_EO(inputsize, theta_init=thetastransferred, phi_i
 predoutputsmod = np.argmax(modeltransferred.predict(data.x_test), axis=1)
 print(f'ported acc is {100*(1 - np.count_nonzero(predoutputsmod-data.y_test_ind)/num_test)}')
 
-# direct training ####################################################################################################################################################
+# direct training ##############################################################################################################
 
 numlayers = 2
 windowhalfwidths = [8, 10]
@@ -101,7 +101,7 @@ for dataset in datasets:
                 gamma_pos='out', saveflag=True, saveflagcheckpoints=False, splitting_errors=splitting_error, 
                 selectedloss=tf.keras.losses.CategoricalCrossentropy(), numruns=5)
 
-# transfer training ####################################################################################################################################################
+# transfer training #########################################################################################################
 
 numlayers = 2
 windowhalfwidths = [8, 10]
@@ -114,7 +114,7 @@ for dataset in datasets:
                 N_classes=10, nummodels=1, gamma_pos='out', trainlayervector=None, useerrcorr=False, useimmprevoptim=False, 
                 selectedloss=tf.keras.losses.CategoricalCrossentropy(), optimizer='adam')
 
-# transfer training KMNIST halfwidth = 8 with 5 epochs per percent instead of 2 ####################################################################################
+# transfer training KMNIST halfwidth = 8 with 5 epochs per percent instead of 2 ############################
 
 numlayers = 2
 windowhalfwidth = 8
@@ -125,7 +125,7 @@ for runno in np.arange(1, 6):
         N_classes=10, nummodels=1, gamma_pos='out', trainlayervector=None, useerrcorr=False, useimmprevoptim=False, 
         selectedloss=tf.keras.losses.CategoricalCrossentropy(), optimizer='adam')
 
-# generating the accuracies of uncorrected and error-corrected ideal models that are programmed into a faulty mesh ##################################################
+# generating the accuracies of uncorrected and error-corrected ideal models that are programmed into a faulty mesh ######
 
 numlayers = 2
 windowhalfwidths = [8, 10]
@@ -135,7 +135,7 @@ for dataset in datasets:
     for windowhalfwidth in windowhalfwidths:
         m.uncorrcorr3mzi(dataset, windowhalfwidth=windowhalfwidth, numruns=5, numlayers=2)
 
-# measuring accuracy of trained models on lossy meshes #############################################################################################################
+# measuring accuracy of trained models on lossy meshes ################################################################
 
 numlayers = 2
 windowhalfwidth = 8
@@ -143,16 +143,30 @@ dataset = 'kmnist'
 
 splitting_errors = [0, 0.1]
 runnos = [4, 1]
+multiplierarray = np.array([0.25, 0.5, 0.75, 1]) 
+heaterlengthfracarray = np.array([0.5]) 
 
 for i in np.arange(2):
-    for multiplier in np.arange(1, 6):
-        m.lossymeshaccuracies(numlayers, windowhalfwidth, dataset, splitting_error=splitting_errors[i], runno=runnos[i], numtrials=10, 
-            MZIbasemeanloss=0.02, MZIbasestddev=0.0016, multiplier=multiplier, heaterfrac=0.8, 
-            gamma_pos='out', trainlayervector=None)
+    for j in np.arange(np.size(multiplierarray)):
+        for k in np.arange(np.size(heaterlengthfracarray)):
+            lossymeshaccuracies(numlayers, windowhalfwidth, dataset,
+                                splitting_error=splitting_errors[i], 
+                                runno=runnos[i], numtrials=10, 
+                                heaterlengthfrac=heaterlengthfracarray[k],
+                                multiplier=multiplierarray[j],
+                                gamma_pos='out', trainlayervector=None)
+            if i==1:
+                lossymeshaccuracies(numlayers, windowhalfwidth, dataset,
+                                    splitting_error=splitting_errors[i], 
+                                    runno=runnos[i], numtrials=10, 
+                                    heaterlengthfrac=heaterlengthfracarray[k],
+                                    multiplier=multiplierarray[j],
+                                    randomalphabetas=True,
+                                    gamma_pos='out', trainlayervector=None)
 
-# plotting ######################################################################################################################################################
+# plotting ###################################################################################################
 
-# Fig 3 ##########################################################################################################################
+# Fig 3 ######################################################################################################
 
 bottom = {'mnist':90, 'kmnist':78, 'fashion':80} # yaxis limits
 top = {'mnist':100, 'kmnist':92, 'fashion':90}
@@ -246,7 +260,7 @@ plt.tight_layout()
 plt.savefig('figures/allaccsforjourno.pdf', bbox_inches='tight')
 fig.show()
 
-# Fig 4 #########################################################################################################################################
+# Fig 4 ##################################################################################################
 
 bottom = {'mnist':90, 'kmnist':78, 'fashion':80}
 top = {'mnist':100, 'kmnist':92, 'fashion':90}
@@ -268,37 +282,44 @@ dataset = 'kmnist'
 fig, axs = plt.subplots(1, 2)
 fig.set_size_inches(20, 6)
 
+spinelinewidth = 2.5
+plotlinewidth = 3.5
+
+for i in range(2):
+    for axis in ['top','bottom','left','right']:
+        axs[i].spines[axis].set_linewidth(spinelinewidth)
+
 # 5epo vs 2epo
-fontsize = 17
+fontsize = 19
 
 plotvars = extractquants(dataset, 256, True, False, get5epo=True)
         
-axs[0].plot(xaxis, plotvars.uncorrmed, color='red', label='uncorr.', linewidth=3)
+axs[0].plot(xaxis, plotvars.uncorrmed, color='red', label='uncorr.', linewidth=plotlinewidth)
 axs[0].fill_between(xaxis, plotvars.uncorrupp, plotvars.uncorrlow, facecolor='red', alpha=alpha,
                        label='_nolegend_')
 
-axs[0].plot(xaxis, plotvars.corrmed, color='green', label='corr.', linewidth=3)
+axs[0].plot(xaxis, plotvars.corrmed, color='green', label='corr.', linewidth=plotlinewidth)
 axs[0].fill_between(xaxis, plotvars.corrupp, plotvars.corrlow, facecolor='green', alpha=alpha,
                        label='_nolegend_')
 
-axs[0].plot(xaxis, plotvars.mzi3corrmed, color='orange', label='3-MZI', linewidth=3)
+axs[0].plot(xaxis, plotvars.mzi3corrmed, color='orange', label='3-MZI', linewidth=plotlinewidth)
 axs[0].fill_between(xaxis, plotvars.mzi3corrupp, plotvars.mzi3corrlow, facecolor='orange', alpha=alpha,
                        label='_nolegend_')
 
 
-axs[0].plot(xaxis, plotvars.adiamed, color='purple', label='trans. 2 epo', linewidth=3)
+axs[0].plot(xaxis, plotvars.adiamed, color='purple', label='trans. 2 epo', linewidth=plotlinewidth)
 axs[0].fill_between(xaxis, plotvars.adiaupp, plotvars.adialow, facecolor='purple', alpha=alpha,
                        label='_nolegend_')
 
-axs[0].plot(xaxisdir, plotvars.dirmed, color='blue', label='direct', linewidth=3)
+axs[0].plot(xaxisdir, plotvars.dirmed, color='blue', label='direct', linewidth=plotlinewidth)
 axs[0].fill_between(xaxisdir, plotvars.dirupp, plotvars.dirlow, facecolor='blue', alpha=alpha,
                        label='_nolegend_')
 
-axs[0].plot(xaxis, plotvars.adia5med, color='magenta', label='trans. 5 epo', linewidth=3)
+axs[0].plot(xaxis, plotvars.adia5med, color='magenta', label='trans. 5 epo', linewidth=plotlinewidth)
 axs[0].fill_between(xaxis, plotvars.adia5upp, plotvars.adia5low, facecolor='magenta', alpha=alpha,
                        label='_nolegend_')
 
-axs[0].vlines((np.sin(np.pi/4)/2)*100, bottom[dataset], top[dataset], linestyles='dashed', linewidth=3)
+axs[0].vlines((np.sin(np.pi/4)/2)*100, bottom[dataset], top[dataset], linestyles='dashed', linewidth=plotlinewidth)
 
 axs[0].set_ylim(bottom=bottom[dataset], top=top[dataset])
 axs[0].set_yticks(np.arange(bottom[dataset], top[dataset]+1, step=2))
@@ -307,9 +328,9 @@ axs[0].set_xlim(left=0, right=36)
 axs[0].tick_params(axis='both', labelsize=fontsize)
 axs[0].set_xlabel('(a) Beamsplitter error in % (error level percent)', fontsize=fontsize)
 axs[0].set_ylabel(dataset+' test accuracy(%)', fontsize=fontsize)
-axs[0].grid(axis='both')
+axs[0].grid(axis='both', linewidth=spinelinewidth)
 
-axs[0].legend(loc='upper center', bbox_to_anchor=(0.5, 1.25), ncol=3, fontsize=fontsize)
+axs[0].legend(loc='upper center', bbox_to_anchor=(0.5, 1.32), ncol=2, fontsize=fontsize)
 
 # kmnist 256 ideal and 10% error as a function of unbalanced loss
 upquant = 0.75
@@ -319,20 +340,24 @@ lowquant = 0.25
 idealacc = plotvars.idealacc[0]
 
 # reading ideal loss files
+heaterlengthfracarray = np.array([0.5])
+multiplierarray = np.array([0.25, 0.5, 0.75, 1])
+
 splitting_error = 0.0
 runno = 4
 errindex = int(splitting_error*100)
 
-foldername = dataset+f"{inputsize}"+f'/err{errindex}/run{runno}'
+foldername = 'models/'+dataset+f'/size{inputsize}/err{errindex}/run{runno}'
 
-ideallossaccs = np.zeros((5, 10))
-
-for i in range(5):
-    baseerror = 0.02
-    with open(foldername+f'/lossyacc{baseerror*(i+1)}.pickle', 'rb') as outputfile:
-        lossesaccsdump = pickle.load(outputfile)
-    ideallossaccs[i, :] = lossesaccsdump['lossyacc']
-
+ideallossaccs = np.zeros((4, 10))
+ideallossbars = np.zeros((2, 4))
+for i in range(1):
+    for j in range(4):
+        with open(foldername+
+                  f'/lossyacc_heater{heaterlengthfracarray[i]}_multiplier{multiplierarray[j]}.pickle',
+                  'rb') as outputfile:
+            lossesaccsdump = pickle.load(outputfile)
+        ideallossaccs[j, :] = lossesaccsdump['lossyacc']
 ideallossmed = np.median(ideallossaccs, axis=1)
 ideallossupp = np.quantile(ideallossaccs, upquant, axis=1)
 ideallosslow = np.quantile(ideallossaccs, lowquant, axis=1)
@@ -343,45 +368,80 @@ splitting_error = 0.1
 runno = 1
 errindex = int(splitting_error*100)
 
-foldername = dataset+f"{inputsize}"+f'/err{errindex}/run{runno}'
+foldername = 'models/'+dataset+f'/size{inputsize}/err{errindex}/run{runno}'
 
 with open(foldername+'/idealhistories.pickle', 'rb') as outputfile:
     idealhistories = pickle.load(outputfile)
 acc10 = idealhistories[-1] 
 
 # reading 10% error loss files
-error10lossaccs = np.zeros((5, 10))
-
-for i in range(5):
-    baseerror = 0.02
-    with open(foldername+f'/lossyacc{baseerror*(i+1)}.pickle', 'rb') as outputfile:
-        lossesaccsdump = pickle.load(outputfile)
-    error10lossaccs[i, :] = lossesaccsdump['lossyacc']
-
+error10lossaccs = np.zeros((4, 10))
+error10lossbars = np.zeros((2, 4))
+for i in range(1):
+    for j in range(4):
+        with open(foldername+
+                  f'/lossyacc_heater{heaterlengthfracarray[i]}_multiplier{multiplierarray[j]}.pickle',
+                  'rb') as outputfile:
+            lossesaccsdump = pickle.load(outputfile)
+        error10lossaccs[j, :] = lossesaccsdump['lossyacc']
 error10lossmed = np.median(error10lossaccs, axis=1)
 error10lossupp = np.quantile(error10lossaccs, upquant, axis=1)
 error10losslow = np.quantile(error10lossaccs, lowquant, axis=1)
 error10lossbars = np.vstack((error10lossmed-error10losslow, error10lossupp-error10lossmed))
 
-# plotting
-lossaxis = np.array([0, 0.02, 0.04, 0.06, 0.08, 0.1])
-axs[1].scatter(np.array([0]), np.array(idealacc[3]), c='green', s=100)
-axs[1].scatter(np.array([0]), acc10, c='red', s=100)
-axs[1].errorbar(lossaxis[1:], ideallossmed, yerr=ideallossbars, ecolor='green', linewidth=3,
-                ls='none', marker='o', markersize=10, color='green', capsize=7, label='ideal')
-axs[1].errorbar(lossaxis[1:], error10lossmed, yerr=error10lossbars, ecolor='red', linewidth=3,
-                ls='none', marker='o', markersize=10, color='red', capsize=7, label='10% MZI error level percent')
+# porting the 10% max faulty matrix into a sample mesh with random faults ###################################
+
+acc10random = np.array([89.18])
+
+# 10% random mesh with loss
+foldername = 'models/'+dataset+f'/size{inputsize}/err{errindex}/run{runno}'
+error10randomlossaccs = np.zeros((4, 10))
+error10randomlossbars = np.zeros((2, 4))
+for i in range(1):
+    for j in range(4):
+        with open(foldername+
+                  f'/randomalphabetaslossyacc_heater{heaterlengthfracarray[i]}_multiplier{multiplierarray[j]}.pickle',
+                  'rb') as outputfile:
+            lossesaccsdump = pickle.load(outputfile)
+        error10randomlossaccs[j, :] = lossesaccsdump['lossyacc']
+error10randomlossmed = np.median(error10randomlossaccs, axis=1)
+error10randomlossupp = np.quantile(error10randomlossaccs, upquant, axis=1)
+error10randomlosslow = np.quantile(error10randomlossaccs, lowquant, axis=1)
+error10randomlossbars = np.vstack((error10randomlossmed-error10randomlosslow, error10randomlossupp-error10randomlossmed))
+
+# plotting ####################################################################################################################
+thirdmarker = 'D'
+heaterbasemeanloss = 0.084
+splitterbasemeanloss = 0.021
+
+multiplierarray = np.array([[0, 0.25, 0.5, 0.75, 1]])
+heaterlengthfracarray = np.array([[0.5]])
+lossaxis = 2*multiplierarray*(heaterbasemeanloss*heaterlengthfracarray + splitterbasemeanloss)
+
+axs[1].scatter(np.array([0]), np.array(idealacc[3]), c='green', s=170, marker='o')
+axs[1].scatter(np.array([0]), acc10, c='blue', s=170, marker='s')
+axs[1].scatter(np.array([0]), acc10random, c='red', s=170, marker=thirdmarker)
+
+axs[1].errorbar(lossaxis[0, 1:], ideallossmed, yerr=ideallossbars, ecolor='green',
+                linewidth=plotlinewidth,
+                ls='none', marker='o', markersize=14, color='green', capsize=7, label='ideal')
+axs[1].errorbar(lossaxis[0, 1:], error10lossmed, yerr=error10lossbars, ecolor='blue',
+                linewidth=plotlinewidth,
+                ls='none', marker='s', markersize=14, color='blue', capsize=7,
+                label='10% max error-tolerant MZI mesh')
+axs[1].errorbar(lossaxis[0, 1:], error10randomlossmed, yerr=error10randomlossbars,
+                ecolor='red', linewidth=plotlinewidth,
+                ls='none', marker=thirdmarker, markersize=14, color='red', capsize=7,
+                label='10% random error MZI mesh')
 
 axs[1].tick_params(axis='both', labelsize=fontsize)
 
 axs[1].set_xlabel('(b) Mean MZI loss in dB', fontsize=fontsize)
-axs[1].set_ylabel(dataset+' test accuracy(%)', fontsize=fontsize)
-axs[1].set_ylim(bottom=89.10, top=89.25)
-axs[1].grid(axis='both')
+axs[1].set_ylabel('KMNIST test accuracy(%)', fontsize=fontsize)
+axs[1].set_ylim(bottom=89.05, top=89.3)
+axs[1].grid(axis='both', linewidth=spinelinewidth)
 
-axs[1].legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), ncol=2, fontsize=fontsize)
+axs[1].legend(loc='upper center', bbox_to_anchor=(0.5, 1.32), ncol=1, fontsize=fontsize)
 
-plt.savefig('figures/trans5lossreplot.pdf', bbox_inches='tight')
+plt.savefig('figures/trans5loss.pdf', bbox_inches='tight')
 fig.show()
-
-
